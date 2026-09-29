@@ -14,6 +14,7 @@ const getTier = (elo: number): Tier => {
   if (elo >= 1400) return { name: 'C Klasmanı', short: 'C', level: 2 }
   return { name: 'D Klasmanı', short: 'D', level: 1 }
 }
+const TIER_ORDER = ['S', 'A', 'B', 'C', 'D'] as const
 
 function FighterArt({ side }: { side: 'ryu' | 'ken' }) {
   return <div className={`fighter fighter-${side}`} aria-hidden="true"><span className="fighter-name">{side.toUpperCase()}</span><div className="head"><i /></div><div className="torso"/><div className="arm arm-one"/><div className="arm arm-two"/><div className="belt"/></div>
@@ -31,6 +32,24 @@ export default function PlayerSearch() {
   const tier = selected ? getTier(selected.elo) : null
   const classCounts = useMemo(() => data ? ['S', 'A', 'B', 'C', 'D'].map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
 
+  // Bir üst klasmana geçmek için kaç oyuncuyu geçmen gerektiğini hesapla.
+  // Sıralama zaten en iyiden en kötüye doğru gittiği için, bir üst klasmanın
+  // en son (en düşük) oyuncusunun rank'ı, bizim sınırımız oluyor.
+  const promotion = useMemo(() => {
+    if (!data || !selected || !tier) return null
+    const tierIndex = TIER_ORDER.indexOf(tier.short as typeof TIER_ORDER[number])
+    if (tierIndex <= 0) return null // zaten en üst klasman (S)
+    const upperShort = TIER_ORDER[tierIndex - 1]
+    let boundaryRank = 0
+    for (const p of data.players) {
+      if (getTier(p.elo).short === upperShort) boundaryRank = p.rank
+    }
+    if (!boundaryRank) return null
+    const need = selected.rank - boundaryRank
+    if (need <= 0) return null
+    return { upperShort, boundaryRank, need }
+  }, [data, selected, tier])
+
   return <main className="site-shell">
     <div className="halftone" aria-hidden="true" />
     <header className="masthead"><a className="brand" href="/" aria-label="rank.sf2blacklist.fun ana sayfa"><span className="brand-mark">R</span><span><b>rank.</b>sf2blacklist.fun</span></a><div className="game-tag"><span>SF II</span> CHAMPION EDITION</div><div className="live-status"><span /> CANLI SIRALAMA</div></header>
@@ -45,7 +64,7 @@ export default function PlayerSearch() {
           {!data && !error && <div className="loading"><span/><span/><span/> Oyuncular arenaya çağrılıyor</div>}
           {error && <div className="notice error">Sıralama verisi yüklenemedi. Sayfayı yenileyip tekrar dene.</div>}
           {data && query.trim().length === 1 && <div className="notice">Aramak için en az 2 karakter yaz.</div>}
-          {data && query.trim().length >= 2 && matches.length === 0 && !selected && <div className="notice">“{query}” ile eşleşen bir dövüşçü bulunamadı.</div>}
+          {data && query.trim().length >= 2 && matches.length === 0 && !selected && <div className="notice">"{query}" ile eşleşen bir dövüşçü bulunamadı.</div>}
           {matches.length > 0 && !selected && <div className="results" id={listId} role="listbox" aria-label="Oyuncu sonuçları">{matches.map(p => { const itemTier = getTier(p.elo); return <button role="option" aria-selected="false" key={`${p.rank}-${p.name}`} onClick={() => choose(p)}><span className="mini-tier">{itemTier.short}</span><span className="result-rank">#{number.format(p.rank)}</span><strong>{p.name}</strong><span className="country">{p.country}</span><ChevronRight/></button> })}</div>}
         </div>
       </div>
@@ -57,6 +76,7 @@ export default function PlayerSearch() {
       <div className="player-data">
         <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
         <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
+        {promotion && <div className="promotion-note"><Zap aria-hidden="true"/><span><strong>{promotion.upperShort}</strong> klasmanına geçmek için önündeki <strong>{number.format(promotion.need)}</strong> kişiyi geçmen gerekiyor ({promotion.upperShort}/{tier.short} sınırı: #{number.format(promotion.boundaryRank)}).</span></div>}
       </div>
     </section> : data ? <section className="rank-system">
       <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
