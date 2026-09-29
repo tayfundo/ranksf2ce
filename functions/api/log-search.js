@@ -1,3 +1,9 @@
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+export const onRequestOptions = () => new Response(null, { status: 204, headers: CORS });
 // Aranan nickleri gizli GitHub Gist'e kaydeden Cloudflare Pages Function.
 // GH_TOKEN ve GH_GIST_ID → Cloudflare → Settings → Variables and Secrets
 const FILE_NAME = 'arama-kayitlari.json';
