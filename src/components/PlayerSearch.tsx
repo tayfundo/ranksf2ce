@@ -8,14 +8,23 @@ type Tier = { name: string; short: string; level: number }
 const number = new Intl.NumberFormat('tr-TR')
 const playTime = (seconds: number) => `${number.format(Math.round(seconds / 3600))} saat`
 const getTier = (elo: number): Tier => {
-  if (elo >= 2000) return { name: 'S Klasmanı', short: 'S', level: 6 }
-  if (elo >= 1800) return { name: 'A Klasmanı', short: 'A', level: 5 }
-  if (elo >= 1600) return { name: 'B Klasmanı', short: 'B', level: 4 }
-  if (elo >= 1400) return { name: 'C Klasmanı', short: 'C', level: 3 }
-  if (elo >= 1200) return { name: 'D Klasmanı', short: 'D', level: 2 }
-  return { name: 'E Klasmanı', short: 'E', level: 1 }
+  if (elo >= 2000) return { name: 'S Klasmanı', short: 'S', level: 5 }
+  if (elo >= 1800) return { name: 'A Klasmanı', short: 'A', level: 4 }
+  if (elo >= 1600) return { name: 'B Klasmanı', short: 'B', level: 3 }
+  if (elo >= 1400) return { name: 'C Klasmanı', short: 'C', level: 2 }
+  return { name: 'D Klasmanı', short: 'D', level: 1 }
 }
-const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', 'E'] as const
+const TIER_ORDER = ['S', 'A', 'B', 'C', 'D'] as const
+
+// Aramaları arka planda, gizli kayıt fonksiyonuna gönderir. Site ziyaretçisi
+// için görünmez, başarısız olursa da sessizce yutulur (arama akışını bozmaz).
+function logSearch(query: string, matched: string | null) {
+  fetch('/.netlify/functions/log-search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, matched }),
+  }).catch(() => {})
+}
 
 function FighterArt({ side }: { side: 'ryu' | 'ken' }) {
   return <div className={`fighter fighter-${side}`} aria-hidden="true"><span className="fighter-name">{side.toUpperCase()}</span><div className="head"><i /></div><div className="torso"/><div className="arm arm-one"/><div className="arm arm-two"/><div className="belt"/></div>
@@ -29,34 +38,50 @@ export default function PlayerSearch() {
   const listId = useId()
   useEffect(() => { fetch('/data/sf2ce-rankings.json').then(r => { if (!r.ok) throw new Error(); return r.json() }).then(setData).catch(() => setError(true)) }, [])
   const matches = useMemo(() => { const needle = query.trim().toLocaleLowerCase('tr-TR'); if (!data || needle.length < 2) return []; return data.players.filter(p => p.name.toLocaleLowerCase('tr-TR').includes(needle)).slice(0, 8) }, [data, query])
-  const choose = (player: Player) => { setSelected(player); setQuery(player.name) }
+  const choose = (player: Player) => { setSelected(player); setQuery(player.name); logSearch(player.name, player.name) }
+  const handleEnter = () => {
+    if (matches[0]) { choose(matches[0]); return }
+    const trimmed = query.trim()
+    if (trimmed.length >= 2) logSearch(trimmed, null)
+  }
   const tier = selected ? getTier(selected.elo) : null
-  const classCounts = useMemo(() => data ? TIER_ORDER.map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
+  const classCounts = useMemo(() => data ? ['S', 'A', 'B', 'C', 'D'].map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
 
-  // Klasman içindeki konum: bar = oyuncunun klasmanındaki bütün oyuncular.
-  // Sol uç = klasmanın en iyisi (üst klasmana yakın), sağ uç = en kötüsü (alt klasmana yakın).
+  // Bulunduğun klasmanın sınırlarını bul: üst klasmana kaç kişi kaldı,
+  // alt klasmana düşmek için kaç kişinin seni geçmesi gerekiyor.
   const tierProgress = useMemo(() => {
     if (!data || !selected || !tier) return null
     const tierIndex = TIER_ORDER.indexOf(tier.short as typeof TIER_ORDER[number])
-    const upperShort = tierIndex > 0 ? TIER_ORDER[tierIndex - 1] : null
-    const lowerShort = tierIndex < TIER_ORDER.length - 1 ? TIER_ORDER[tierIndex + 1] : null
     const topRank = data.players.find(p => getTier(p.elo).short === tier.short)?.rank ?? selected.rank
+    const lowerShort = TIER_ORDER[tierIndex + 1]
     const lowerFirst = lowerShort ? data.players.find(p => getTier(p.elo).short === lowerShort)?.rank : undefined
     const bottomRank = lowerFirst ? lowerFirst - 1 : data.players.length
-    const size = Math.max(1, bottomRank - topRank + 1)
-    const position = size > 1 ? Math.min(1, Math.max(0, (selected.rank - topRank) / (size - 1))) : 0.5
-    return {
-      upperShort,
-      lowerShort,
-      size,
-      position,
-      up: upperShort ? selected.rank - topRank + 1 : null,       // üst klasmana geçmek için geçilmesi gereken kişi
-      down: lowerShort ? bottomRank - selected.rank + 1 : null,  // alt klasmana düşmek için seni geçmesi gereken kişi
+    const span = Math.max(1, bottomRank - topRank)
+    const fraction = Math.min(1, Math.max(0, (bottomRank - selected.rank) / span))
+
+    let up: { short: string; need: number } | null = null
+    if (tierIndex > 0) {
+      const upperShort = TIER_ORDER[tierIndex - 1]
+      const boundaryRank = topRank - 1
+      const need = selected.rank - boundaryRank
+      if (need > 0) up = { short: upperShort, need }
     }
+
+    let down: { short: string; need: number } | null = null
+    if (lowerShort) {
+      down = { short: lowerShort, need: bottomRank - selected.rank }
+    }
+
+    return { up, down, fraction }
   }, [data, selected, tier])
 
   return <main className="site-shell">
     <div className="halftone" aria-hidden="true" />
+    <img
+      src="https://api.visitor.plantree.me/visitor-badge/pv?namespace=rank.sf2blacklist.fun&key=home&label=ziyaretci&color=3ea8ff"
+      alt="ziyaretçi sayacı"
+      style={{ position: 'fixed', top: 10, right: 10, zIndex: 50, opacity: 0.85, height: 20 }}
+    />
     <header className="masthead"><a className="brand" href="/" aria-label="rank.sf2blacklist.fun ana sayfa"><span className="brand-mark">R</span><span><b>rank.</b>sf2blacklist.fun</span></a><div className="game-tag"><span>SF II</span> CHAMPION EDITION</div><div className="live-status"><span /> CANLI SIRALAMA</div></header>
     <section className="hero">
       <FighterArt side="ryu"/><FighterArt side="ken"/>
@@ -65,7 +90,7 @@ export default function PlayerSearch() {
         <p className="lede">Tam ya da kısmi isim yazabilirsin, büyük/küçük harf fark etmez.</p>
         <div className="search-wrap">
           <label htmlFor="nick">OYUNCU NİCKİ</label>
-          <div className="search-box"><Search aria-hidden="true"/><input id="nick" value={query} onChange={e => { setQuery(e.target.value); setSelected(null) }} onKeyDown={e => { if (e.key === 'Enter' && matches[0]) choose(matches[0]) }} placeholder="Nickini yaz..." autoComplete="off" disabled={!data || error} role="combobox" aria-controls={listId} aria-expanded={matches.length > 0 && !selected}/><span className="keycap">ENTER ↵</span></div>
+          <div className="search-box"><Search aria-hidden="true"/><input id="nick" value={query} onChange={e => { setQuery(e.target.value); setSelected(null) }} onKeyDown={e => { if (e.key === 'Enter') handleEnter() }} placeholder="Nickini yaz..." autoComplete="off" disabled={!data || error} role="combobox" aria-controls={listId} aria-expanded={matches.length > 0 && !selected}/><span className="keycap">ENTER ↵</span></div>
           {!data && !error && <div className="loading"><span/><span/><span/> Oyuncular arenaya çağrılıyor</div>}
           {error && <div className="notice error">Sıralama verisi yüklenemedi. Sayfayı yenileyip tekrar dene.</div>}
           {data && query.trim().length === 1 && <div className="notice">Aramak için en az 2 karakter yaz.</div>}
@@ -77,31 +102,18 @@ export default function PlayerSearch() {
     </section>
 
     {selected && tier ? <section className="player-card" aria-live="polite">
-      <div className="rank-panel"><span className="panel-label">LİG RÜTBESİ</span><div className="tier-emblem"><Shield/><strong>{tier.short}</strong></div><h3>{tier.name}</h3><div className="tier-pips" aria-label={`${TIER_ORDER.length} üzerinden ${tier.level} seviye`}>{TIER_ORDER.map((_, idx) => idx + 1).map(i => <i className={i <= tier.level ? 'active' : ''} key={i}/>)}</div></div>
+      <div className="rank-panel"><span className="panel-label">LİG RÜTBESİ</span><div className="tier-emblem"><Shield/><strong>{tier.short}</strong></div><h3>{tier.name}</h3><div className="tier-pips" aria-label={`5 üzerinden ${tier.level} seviye`}>{[1,2,3,4,5].map(i => <i className={i <= tier.level ? 'active' : ''} key={i}/>)}</div></div>
       <div className="player-data">
         <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
         <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
-        {tierProgress && (() => {
-          const { up, down, upperShort, lowerShort, size, position } = tierProgress
-          const edge = position < 0.08 ? 'start' : position > 0.92 ? 'end' : 'mid'
-          return <div className="rank-progress tier-meter">
-            <div className="meter-ends">
-              <div className="meter-end">
-                <span>{up != null ? `${upperShort} KLASMANINA GEÇİŞ` : 'ZİRVEDESİN'}</span>
-                <b>{up != null ? `${number.format(up)} kişi kaldı` : 'Üstte klasman yok'}</b>
-              </div>
-              <div className="meter-mid">{tier.short} KLASMANI · {number.format(size)} OYUNCU</div>
-              <div className="meter-end meter-end-right">
-                <span>{down != null ? `${lowerShort} KLASMANINA DÜŞÜŞ` : 'EN ALT KLASMAN'}</span>
-                <b>{down != null ? `${number.format(down)} kişi geçerse düşer` : 'Altta klasman yok'}</b>
-              </div>
-            </div>
-            <div className="meter-track" role="img" aria-label={`${tier.short} klasmanındaki ${number.format(size)} oyuncu arasında ${number.format(selected.rank)}. sıradasın`}>
-              <i className="meter-fill" style={{ width: `${position * 100}%` }} />
-              <span className="meter-marker" data-edge={edge} style={{ left: `${position * 100}%` }}><em>#{number.format(selected.rank)}</em></span>
-            </div>
-          </div>
-        })()}
+        {tierProgress?.up && <div className="rank-progress">
+          <div><span>{tierProgress.up.short} KLASMANINA GEÇİŞ</span><b>{number.format(tierProgress.up.need)} kişi kaldı</b></div>
+          <div className="progress-track"><i style={{ transform: `scaleX(${tierProgress.fraction})` }}/></div>
+        </div>}
+        {tierProgress?.down && <div className="rank-progress">
+          <div><span>{tierProgress.down.short} KLASMANINA DÜŞÜŞ</span><b>{number.format(tierProgress.down.need)} kişi geçerse düşer</b></div>
+          <div className="progress-track"><i style={{ transform: `scaleX(${1 - tierProgress.fraction})` }}/></div>
+        </div>}
       </div>
     </section> : data ? <section className="rank-system">
       <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
