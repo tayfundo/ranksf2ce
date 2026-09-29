@@ -15,6 +15,14 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  build: {
+    rollupOptions: {
+      // "cloudflare:workers" sadece Cloudflare'ın çalışma zamanında var olan
+      // özel bir modül — build sırasında çözülmeye çalışılmasın, olduğu gibi
+      // bırakılsın, gerçek ortamda Cloudflare kendisi sağlayacak.
+      external: ['cloudflare:workers'],
+    },
+  },
 })
 
 export default config
