@@ -32,32 +32,26 @@ export default function PlayerSearch() {
   const tier = selected ? getTier(selected.elo) : null
   const classCounts = useMemo(() => data ? ['S', 'A', 'B', 'C', 'D'].map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
 
-  // Bulunduğun klasmanın sınırlarını bul: üst klasmana ka\u00e7 ki\u015fi kald\u0131,
-  // alt klasmana d\u00fc\u015fmek i\u00e7in ka\u00e7 ki\u015finin seni ge\u00e7mesi gerekiyor.
+  // Klasman içindeki konum: bar = oyuncunun klasmanındaki bütün oyuncular.
+  // Sol uç = klasmanın en iyisi (üst klasmana yakın), sağ uç = en kötüsü (alt klasmana yakın).
   const tierProgress = useMemo(() => {
     if (!data || !selected || !tier) return null
     const tierIndex = TIER_ORDER.indexOf(tier.short as typeof TIER_ORDER[number])
+    const upperShort = tierIndex > 0 ? TIER_ORDER[tierIndex - 1] : null
+    const lowerShort = tierIndex < TIER_ORDER.length - 1 ? TIER_ORDER[tierIndex + 1] : null
     const topRank = data.players.find(p => getTier(p.elo).short === tier.short)?.rank ?? selected.rank
-    const lowerShort = TIER_ORDER[tierIndex + 1]
     const lowerFirst = lowerShort ? data.players.find(p => getTier(p.elo).short === lowerShort)?.rank : undefined
     const bottomRank = lowerFirst ? lowerFirst - 1 : data.players.length
-    const span = Math.max(1, bottomRank - topRank)
-    const fraction = Math.min(1, Math.max(0, (bottomRank - selected.rank) / span))
-
-    let up: { short: string; need: number } | null = null
-    if (tierIndex > 0) {
-      const upperShort = TIER_ORDER[tierIndex - 1]
-      const boundaryRank = topRank - 1
-      const need = selected.rank - boundaryRank
-      if (need > 0) up = { short: upperShort, need }
+    const size = Math.max(1, bottomRank - topRank + 1)
+    const position = size > 1 ? Math.min(1, Math.max(0, (selected.rank - topRank) / (size - 1))) : 0.5
+    return {
+      upperShort,
+      lowerShort,
+      size,
+      position,
+      up: upperShort ? selected.rank - topRank + 1 : null,       // üst klasmana geçmek için geçilmesi gereken kişi
+      down: lowerShort ? bottomRank - selected.rank + 1 : null,  // alt klasmana düşmek için seni geçmesi gereken kişi
     }
-
-    let down: { short: string; need: number } | null = null
-    if (lowerShort) {
-      down = { short: lowerShort, need: bottomRank - selected.rank }
-    }
-
-    return { up, down, fraction }
   }, [data, selected, tier])
 
   return <main className="site-shell">
@@ -86,14 +80,27 @@ export default function PlayerSearch() {
       <div className="player-data">
         <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
         <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
-        {tierProgress?.up && <div className="rank-progress">
-          <div><span>{tierProgress.up.short} KLASMANINA GEÇİŞ</span><b>{number.format(tierProgress.up.need)} kişi kaldı</b></div>
-          <div className="progress-track"><i style={{ transform: `scaleX(${tierProgress.fraction})` }}/></div>
-        </div>}
-        {tierProgress?.down && <div className="rank-progress">
-          <div><span>{tierProgress.down.short} KLASMANINA DÜŞÜŞ</span><b>{number.format(tierProgress.down.need)} kişi geçerse düşer</b></div>
-          <div className="progress-track"><i style={{ transform: `scaleX(${1 - tierProgress.fraction})` }}/></div>
-        </div>}
+        {tierProgress && (() => {
+          const { up, down, upperShort, lowerShort, size, position } = tierProgress
+          const edge = position < 0.08 ? 'start' : position > 0.92 ? 'end' : 'mid'
+          return <div className="rank-progress tier-meter">
+            <div className="meter-ends">
+              <div className="meter-end">
+                <span>{up != null ? `${upperShort} KLASMANINA GEÇİŞ` : 'ZİRVEDESİN'}</span>
+                <b>{up != null ? `${number.format(up)} kişi kaldı` : 'Üstte klasman yok'}</b>
+              </div>
+              <div className="meter-mid">{tier.short} KLASMANI · {number.format(size)} OYUNCU</div>
+              <div className="meter-end meter-end-right">
+                <span>{down != null ? `${lowerShort} KLASMANINA DÜŞÜŞ` : 'EN ALT KLASMAN'}</span>
+                <b>{down != null ? `${number.format(down)} kişi geçerse düşer` : 'Altta klasman yok'}</b>
+              </div>
+            </div>
+            <div className="meter-track" role="img" aria-label={`${tier.short} klasmanındaki ${number.format(size)} oyuncu arasında ${number.format(selected.rank)}. sıradasın`}>
+              <i className="meter-fill" style={{ width: `${position * 100}%` }} />
+              <span className="meter-marker" data-edge={edge} style={{ left: `${position * 100}%` }}><em>#{number.format(selected.rank)}</em></span>
+            </div>
+          </div>
+        })()}
       </div>
     </section> : data ? <section className="rank-system">
       <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
