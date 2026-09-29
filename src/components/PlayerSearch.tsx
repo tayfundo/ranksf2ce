@@ -19,7 +19,7 @@ const TIER_ORDER = ['S', 'A', 'B', 'C', 'D'] as const
 // Aramaları arka planda, gizli kayıt fonksiyonuna gönderir. Site ziyaretçisi
 // için görünmez, başarısız olursa da sessizce yutulur (arama akışını bozmaz).
 function logSearch(query: string, matched: string | null) {
-  fetch('/.netlify/functions/log-search', {
+  fetch('/api/log-search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, matched }),
@@ -34,7 +34,7 @@ function VisitorCounter() {
   useEffect(() => {
     let counted = false
     try { counted = sessionStorage.getItem('visit-counted') === '1' } catch {}
-    fetch('/.netlify/functions/visit-counter', { method: counted ? 'GET' : 'POST' })
+    fetch('/api/visit-counter', { method: counted ? 'GET' : 'POST' })
       .then(async r => {
         const text = await r.text()
         let d: { count?: number; error?: string } = {}
