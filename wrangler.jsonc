@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ranksf2ce",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "@tanstack/react-start/server-entry",
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    { "binding": "COUNTER", "id": "ff35e94203434f2880d3f39146f1ff44" }
+  ]
+}

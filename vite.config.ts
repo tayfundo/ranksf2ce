@@ -1,28 +1,20 @@
 import { defineConfig } from 'vite'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { cloudflare } from '@cloudflare/vite-plugin'
 import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
-import netlify from '@netlify/vite-plugin-tanstack-start'
 
 const config = defineConfig({
   plugins: [
+    cloudflare({ viteEnvironment: { name: 'ssr' } }),
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
     tailwindcss(),
-    netlify(),
     tanstackStart(),
     viteReact(),
   ],
-  build: {
-    rollupOptions: {
-      // "cloudflare:workers" sadece Cloudflare'ın çalışma zamanında var olan
-      // özel bir modül — build sırasında çözülmeye çalışılmasın, olduğu gibi
-      // bırakılsın, gerçek ortamda Cloudflare kendisi sağlayacak.
-      external: ['cloudflare:workers'],
-    },
-  },
 })
 
 export default config
