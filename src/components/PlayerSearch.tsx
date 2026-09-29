@@ -30,20 +30,23 @@ function logSearch(query: string, matched: string | null) {
 // Fonksiyon ulaşılamazsa rozet hiç gösterilmez (kırık görsel kalmaz).
 function VisitorCounter() {
   const [count, setCount] = useState<number | null>(null)
+  const [failure, setFailure] = useState<string | null>(null)
   useEffect(() => {
     let counted = false
     try { counted = sessionStorage.getItem('visit-counted') === '1' } catch {}
     fetch('/.netlify/functions/visit-counter', { method: counted ? 'GET' : 'POST' })
-      .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(d => {
-        if (typeof d.count !== 'number') return
+      .then(async r => {
+        const text = await r.text()
+        let d: { count?: number; error?: string } = {}
+        try { d = JSON.parse(text) } catch {}
+        if (!r.ok || typeof d.count !== 'number') throw new Error(`HTTP ${r.status} ${d.error ?? text.slice(0, 80)}`)
         setCount(d.count)
         try { sessionStorage.setItem('visit-counted', '1') } catch {}
       })
-      .catch(() => {})
+      .catch(e => setFailure(String(e?.message ?? e)))
   }, [])
-  if (count === null) return null
-  return <div className="visitor-badge" aria-label={`Toplam ziyaretçi: ${number.format(count)}`}><span>ZİYARETÇİ</span><b>{number.format(count)}</b></div>
+  if (count === null && failure === null) return null
+  return <div className="visitor-badge" title={failure ?? undefined} aria-label={count === null ? 'Ziyaretçi sayacı kullanılamıyor' : `Toplam ziyaretçi: ${number.format(count)}`}><span>ZİYARETÇİ</span><b>{count === null ? '?' : number.format(count)}</b></div>
 }
 
 function FighterArt({ side }: { side: 'ryu' | 'ken' }) {

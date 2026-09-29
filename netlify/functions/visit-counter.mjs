@@ -21,7 +21,7 @@ export default async (req) => {
       await store.set(KEY, String(count));
     }
     return json({ count });
-  } catch {
-    return json({ error: 'unavailable' }, 500);
+  } catch (err) {
+    return json({ error: `unavailable: ${err?.message ?? err}` }, 500);
   }
 };
