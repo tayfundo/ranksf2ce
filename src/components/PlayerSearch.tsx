@@ -32,14 +32,14 @@ export default function PlayerSearch() {
   const tier = selected ? getTier(selected.elo) : null
   const classCounts = useMemo(() => data ? ['S', 'A', 'B', 'C', 'D'].map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
 
-  // Bir üst klasmana geçmek için kaç oyuncuyu geçmen gerektiğini hesapla.
-  // Sıralama zaten en iyiden en kötüye doğru gittiği için, bir üst klasmanın
-  // en son (en düşük) oyuncusunun rank'ı, bizim sınırımız oluyor.
-  const promotion = useMemo(() => {
+  // Bir üst klasmana geçmek için kaç oyuncuyu geçmen gerektiğini, ve bulunduğun
+  // klasman içindeki ilerlemeni (0 = klasmana yeni girdin, 1 = zirvedesin) hesapla.
+  const progress = useMemo(() => {
     if (!data || !selected || !tier) return null
     const tierIndex = TIER_ORDER.indexOf(tier.short as typeof TIER_ORDER[number])
-    if (tierIndex <= 0) return null // zaten en üst klasman (S)
+    if (tierIndex <= 0) return null // zaten en üst klasman (S), gösterecek bir şey yok
     const upperShort = TIER_ORDER[tierIndex - 1]
+    const topRank = data.players.find(p => getTier(p.elo).short === tier.short)?.rank ?? selected.rank
     let boundaryRank = 0
     for (const p of data.players) {
       if (getTier(p.elo).short === upperShort) boundaryRank = p.rank
@@ -47,7 +47,14 @@ export default function PlayerSearch() {
     if (!boundaryRank) return null
     const need = selected.rank - boundaryRank
     if (need <= 0) return null
-    return { upperShort, boundaryRank, need }
+    // Bu klasmanın en altı (bir alt klasmanın ilk oyuncusundan bir önceki rank,
+    // ya da hiç alt klasman yoksa toplam oyuncu sayısı).
+    const lowerShort = TIER_ORDER[tierIndex + 1]
+    const lowerFirst = lowerShort ? data.players.find(p => getTier(p.elo).short === lowerShort)?.rank : undefined
+    const bottomRank = lowerFirst ? lowerFirst - 1 : data.players.length
+    const span = Math.max(1, bottomRank - topRank)
+    const fraction = Math.min(1, Math.max(0, (bottomRank - selected.rank) / span))
+    return { upperShort, boundaryRank, need, fraction }
   }, [data, selected, tier])
 
   return <main className="site-shell">
@@ -76,7 +83,10 @@ export default function PlayerSearch() {
       <div className="player-data">
         <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
         <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
-        {promotion && <div className="promotion-note"><Zap aria-hidden="true"/><span><strong>{promotion.upperShort}</strong> klasmanına geçmek için önündeki <strong>{number.format(promotion.need)}</strong> kişiyi geçmen gerekiyor ({promotion.upperShort}/{tier.short} sınırı: #{number.format(promotion.boundaryRank)}).</span></div>}
+        {progress && <div className="rank-progress">
+          <div><span>{progress.upperShort} KLASMANINA GEÇİŞ</span><b>{number.format(progress.need)} kişi kaldı</b></div>
+          <div className="progress-track"><i style={{ transform: `scaleX(${progress.fraction})` }}/></div>
+        </div>}
       </div>
     </section> : data ? <section className="rank-system">
       <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
