@@ -26,6 +26,26 @@ function logSearch(query: string, matched: string | null) {
   }).catch(() => {})
 }
 
+// Ziyaretçi sayacı: oturum başına bir kez sayacı artırır, sonrasında sadece okur.
+// Fonksiyon ulaşılamazsa rozet hiç gösterilmez (kırık görsel kalmaz).
+function VisitorCounter() {
+  const [count, setCount] = useState<number | null>(null)
+  useEffect(() => {
+    let counted = false
+    try { counted = sessionStorage.getItem('visit-counted') === '1' } catch {}
+    fetch('/.netlify/functions/visit-counter', { method: counted ? 'GET' : 'POST' })
+      .then(r => { if (!r.ok) throw new Error(); return r.json() })
+      .then(d => {
+        if (typeof d.count !== 'number') return
+        setCount(d.count)
+        try { sessionStorage.setItem('visit-counted', '1') } catch {}
+      })
+      .catch(() => {})
+  }, [])
+  if (count === null) return null
+  return <div className="visitor-badge" aria-label={`Toplam ziyaretçi: ${number.format(count)}`}><span>ZİYARETÇİ</span><b>{number.format(count)}</b></div>
+}
+
 function FighterArt({ side }: { side: 'ryu' | 'ken' }) {
   return <div className={`fighter fighter-${side}`} aria-hidden="true"><span className="fighter-name">{side.toUpperCase()}</span><div className="head"><i /></div><div className="torso"/><div className="arm arm-one"/><div className="arm arm-two"/><div className="belt"/></div>
 }
@@ -77,11 +97,7 @@ export default function PlayerSearch() {
 
   return <main className="site-shell">
     <div className="halftone" aria-hidden="true" />
-    <img
-      src="https://api.visitor.plantree.me/visitor-badge/pv?namespace=rank.sf2blacklist.fun&key=home&label=ziyaretci&color=3ea8ff"
-      alt="ziyaretçi sayacı"
-      style={{ position: 'fixed', top: 10, right: 10, zIndex: 50, opacity: 0.85, height: 20 }}
-    />
+    <VisitorCounter />
     <header className="masthead"><a className="brand" href="/" aria-label="rank.sf2blacklist.fun ana sayfa"><span className="brand-mark">R</span><span><b>rank.</b>sf2blacklist.fun</span></a><div className="game-tag"><span>SF II</span> CHAMPION EDITION</div><div className="live-status"><span /> CANLI SIRALAMA</div></header>
     <section className="hero">
       <FighterArt side="ryu"/><FighterArt side="ken"/>

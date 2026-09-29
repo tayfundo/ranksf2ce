@@ -37,3 +37,5 @@
 .meter-marker[data-edge='end'] em:before{left:auto;right:6px;transform:rotate(45deg)}
 @keyframes meterGrow{from{transform:scaleX(0)}}
 @media(max-width:620px){.meter-ends{grid-template-columns:1fr 1fr}.meter-mid{display:none}}
+
+.visitor-badge{position:fixed;top:10px;right:10px;z-index:50;display:flex;height:22px;font:500 10px/22px 'DM Mono',monospace;letter-spacing:.12em;border-radius:3px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.35)}.visitor-badge span{padding:0 8px;background:#1b2b45;color:#cfe6ff}.visitor-badge b{padding:0 9px;background:var(--electric);color:var(--navy);font-weight:700}
