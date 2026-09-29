@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { env } from 'cloudflare:workers'
 
 // Ziyaretçi sayacı: Cloudflare KV'de tek bir sayı tutuyor.
 // COUNTER, Cloudflare panosunda Settings > Bindings üzerinden bağlanan KV namespace'i.
@@ -10,9 +11,8 @@ const json = (body: unknown, status = 200) =>
   })
 
 const handle = async ({ request }: { request: Request }) => {
-  const env = (request as any).context?.cloudflare?.env
   try {
-    const counter = env?.COUNTER
+    const counter = (env as any).COUNTER
     if (!counter) return json({ error: 'unavailable: COUNTER binding bulunamadı' }, 500)
     let count = Number(await counter.get(KEY)) || 0
     if (request.method === 'POST') {

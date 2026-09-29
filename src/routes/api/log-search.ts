@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { env } from 'cloudflare:workers'
 
 // Aranan nickleri gizli bir GitHub Gist'e kaydeden sunucu rotası.
 // GH_TOKEN ve GH_GIST_ID, Cloudflare panosundaki Environment Variables'tan geliyor.
@@ -9,9 +10,8 @@ export const Route = createFileRoute('/api/log-search')({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const env = (request as any).context?.cloudflare?.env
-        const token = env?.GH_TOKEN
-        const gistId = env?.GH_GIST_ID
+        const token = (env as any).GH_TOKEN
+        const gistId = (env as any).GH_GIST_ID
         if (!token || !gistId) {
           return new Response('Sunucu yapılandırması eksik', { status: 500 })
         }
