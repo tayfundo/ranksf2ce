@@ -8,13 +8,14 @@ type Tier = { name: string; short: string; level: number }
 const number = new Intl.NumberFormat('tr-TR')
 const playTime = (seconds: number) => `${number.format(Math.round(seconds / 3600))} saat`
 const getTier = (elo: number): Tier => {
-  if (elo >= 2000) return { name: 'S Klasmanı', short: 'S', level: 5 }
-  if (elo >= 1800) return { name: 'A Klasmanı', short: 'A', level: 4 }
-  if (elo >= 1600) return { name: 'B Klasmanı', short: 'B', level: 3 }
-  if (elo >= 1400) return { name: 'C Klasmanı', short: 'C', level: 2 }
-  return { name: 'D Klasmanı', short: 'D', level: 1 }
+  if (elo >= 2000) return { name: 'S Klasmanı', short: 'S', level: 6 }
+  if (elo >= 1800) return { name: 'A Klasmanı', short: 'A', level: 5 }
+  if (elo >= 1600) return { name: 'B Klasmanı', short: 'B', level: 4 }
+  if (elo >= 1400) return { name: 'C Klasmanı', short: 'C', level: 3 }
+  if (elo >= 1200) return { name: 'D Klasmanı', short: 'D', level: 2 }
+  return { name: 'E Klasmanı', short: 'E', level: 1 }
 }
-const TIER_ORDER = ['S', 'A', 'B', 'C', 'D'] as const
+const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', 'E'] as const
 
 function FighterArt({ side }: { side: 'ryu' | 'ken' }) {
   return <div className={`fighter fighter-${side}`} aria-hidden="true"><span className="fighter-name">{side.toUpperCase()}</span><div className="head"><i /></div><div className="torso"/><div className="arm arm-one"/><div className="arm arm-two"/><div className="belt"/></div>
@@ -30,7 +31,7 @@ export default function PlayerSearch() {
   const matches = useMemo(() => { const needle = query.trim().toLocaleLowerCase('tr-TR'); if (!data || needle.length < 2) return []; return data.players.filter(p => p.name.toLocaleLowerCase('tr-TR').includes(needle)).slice(0, 8) }, [data, query])
   const choose = (player: Player) => { setSelected(player); setQuery(player.name) }
   const tier = selected ? getTier(selected.elo) : null
-  const classCounts = useMemo(() => data ? ['S', 'A', 'B', 'C', 'D'].map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
+  const classCounts = useMemo(() => data ? TIER_ORDER.map(short => ({ short, count: data.players.filter(player => getTier(player.elo).short === short).length })) : [], [data])
 
   // Klasman içindeki konum: bar = oyuncunun klasmanındaki bütün oyuncular.
   // Sol uç = klasmanın en iyisi (üst klasmana yakın), sağ uç = en kötüsü (alt klasmana yakın).
@@ -76,7 +77,7 @@ export default function PlayerSearch() {
     </section>
 
     {selected && tier ? <section className="player-card" aria-live="polite">
-      <div className="rank-panel"><span className="panel-label">LİG RÜTBESİ</span><div className="tier-emblem"><Shield/><strong>{tier.short}</strong></div><h3>{tier.name}</h3><div className="tier-pips" aria-label={`5 üzerinden ${tier.level} seviye`}>{[1,2,3,4,5].map(i => <i className={i <= tier.level ? 'active' : ''} key={i}/>)}</div></div>
+      <div className="rank-panel"><span className="panel-label">LİG RÜTBESİ</span><div className="tier-emblem"><Shield/><strong>{tier.short}</strong></div><h3>{tier.name}</h3><div className="tier-pips" aria-label={`${TIER_ORDER.length} üzerinden ${tier.level} seviye`}>{TIER_ORDER.map((_, idx) => idx + 1).map(i => <i className={i <= tier.level ? 'active' : ''} key={i}/>)}</div></div>
       <div className="player-data">
         <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
         <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
