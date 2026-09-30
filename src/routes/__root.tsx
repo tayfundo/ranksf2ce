@@ -3,7 +3,7 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 
 import '../styles.css'
 
-const siteName = 'rank.sf2blacklist.fun — SF2CE Oyuncu Sorgulama'
+const siteName = 'sf2blacklist.fun — SF2CE Oyuncu Sorgulama'
 const siteDescription = 'Street Fighter II Champion Edition oyuncularını tam veya kısmi isimle ara; klasman, sıralama, maç ve oyun süresi bilgilerini gör.'
 
 export const Route = createRootRoute({
