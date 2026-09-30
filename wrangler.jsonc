@@ -6,6 +6,7 @@
   "main": "@tanstack/react-start/server-entry",
   "observability": { "enabled": true },
   "kv_namespaces": [
-    { "binding": "COUNTER", "id": "ff35e94203434f2880d3f39146f1ff44" }
+    { "binding": "COUNTER", "id": "ff35e94203434f2880d3f39146f1ff44" },
+    { "binding": "RANKINGS", "id": "1144dd7c6a5f4647b361bef4486d440f" }
   ]
 }
