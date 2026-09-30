@@ -59,7 +59,11 @@ export default function PlayerSearch() {
   const [selected, setSelected] = useState<Player | null>(null)
   const [error, setError] = useState(false)
   const listId = useId()
-  useEffect(() => { fetch('/data/sf2ce-rankings.json').then(r => { if (!r.ok) throw new Error(); return r.json() }).then(setData).catch(() => setError(true)) }, [])
+  useEffect(() => {
+    // Önce KV'den (/api/rankings) oku; olmazsa repodaki eski dosyaya düş.
+    const load = (url: string): Promise<Rankings> => fetch(url).then(r => { if (!r.ok) throw new Error(); return r.json() })
+    load('/api/rankings').catch(() => load('/data/sf2ce-rankings.json')).then(setData).catch(() => setError(true))
+  }, [])
   const matches = useMemo(() => { const needle = query.trim().toLocaleLowerCase('tr-TR'); if (!data || needle.length < 2) return []; return data.players.filter(p => p.name.toLocaleLowerCase('tr-TR').includes(needle)).slice(0, 8) }, [data, query])
   const choose = (player: Player) => { setSelected(player); setQuery(player.name); logSearch(player.name, player.name) }
   const handleEnter = () => {
