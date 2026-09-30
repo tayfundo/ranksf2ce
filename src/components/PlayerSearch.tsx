@@ -142,7 +142,7 @@ export default function PlayerSearch() {
       <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
       <div className="rank-ladder">{classCounts.map((item, i) => <div className={`rank-row rank-${i}`} key={item.short}><b>{item.short}</b><span>KLASMANI</span><i/><small>{number.format(item.count)} OYUNCU</small></div>)}</div>
     </section> : null}
-    <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>KAYITLI OYUNCU</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>SON GÜNCELLEME</span><strong>{data ? new Date(data.lastUpdated).toLocaleDateString('tr-TR') : '—'}</strong></div></section>
+    <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>AKTİF OYUNCU</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>SON GÜNCELLEME</span><strong>{data ? new Date(data.lastUpdated).toLocaleDateString('tr-TR') : '—'}</strong></div></section>
     <footer><span>sf2blacklist.fun / FIGHTCADE ARŞİVİ</span><p>Veriler Fightcade sıralama arşivinden derlenmiştir.</p><b>© 2026</b></footer>
   </main>
 }
