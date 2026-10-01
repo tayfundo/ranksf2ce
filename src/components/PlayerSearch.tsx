@@ -60,9 +60,8 @@ export default function PlayerSearch() {
   const [error, setError] = useState(false)
   const listId = useId()
   useEffect(() => {
-    // Önce KV'den (/api/rankings) oku; olmazsa repodaki eski dosyaya düş.
-    const load = (url: string): Promise<Rankings> => fetch(url).then(r => { if (!r.ok) throw new Error(); return r.json() })
-    load('/api/rankings').catch(() => load('/data/sf2ce-rankings.json')).then(setData).catch(() => setError(true))
+    // Veri sadece KV'den (/api/rankings) okunur; eski dosyaya düşme yok. Okunamazsa hata gösterilir.
+    fetch('/api/rankings').then(r => { if (!r.ok) throw new Error(); return r.json() }).then(setData).catch(() => setError(true))
   }, [])
   const matches = useMemo(() => { const needle = query.trim().toLocaleLowerCase('tr-TR'); if (!data || needle.length < 2) return []; return data.players.filter(p => p.name.toLocaleLowerCase('tr-TR').includes(needle)).slice(0, 8) }, [data, query])
   const choose = (player: Player) => { setSelected(player); setQuery(player.name); logSearch(player.name, player.name) }
@@ -142,7 +141,7 @@ export default function PlayerSearch() {
       <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
       <div className="rank-ladder">{classCounts.map((item, i) => <div className={`rank-row rank-${i}`} key={item.short}><b>{item.short}</b><span>KLASMANI</span><i/><small>{number.format(item.count)} OYUNCU</small></div>)}</div>
     </section> : null}
-    <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>AKTİF OYUNCU</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>SON GÜNCELLEME</span><strong>{data ? new Date(data.lastUpdated).toLocaleDateString('tr-TR') : '—'}</strong></div></section>
+    <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>AKTİF OYUNCU</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>SON GÜNCELLEME</span><strong>{data ? new Date(data.lastUpdated).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</strong></div></section>
     <footer><span>sf2blacklist.fun / FIGHTCADE ARŞİVİ</span><p>Veriler Fightcade sıralama arşivinden derlenmiştir.</p><b>© 2026</b></footer>
   </main>
 }
