@@ -16,6 +16,18 @@ const getTier = (elo: number): Tier => {
 }
 const TIER_ORDER = ['S', 'A', 'B', 'C', 'D'] as const
 
+const TIER_BAR_CSS = `
+.tp-wrap{padding:18px 24px 22px;border-top:1px solid rgba(120,170,255,.25)}
+.tp-labels,.tp-nums{display:flex;justify-content:space-between;gap:12px}
+.tp-labels span{font-size:11px;letter-spacing:.14em;color:#a9c4ee;font-family:ui-monospace,monospace}
+.tp-nums{margin-top:10px}
+.tp-nums b{font-size:13px;color:#59a5ff;font-family:ui-monospace,monospace}
+.tp-bar{position:relative;height:8px;margin-top:10px;border-radius:99px;background:rgba(120,170,255,.16)}
+.tp-fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#1768d8,#5aa8ff)}
+.tp-marker{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #1f7aff;transform:translate(-50%,-50%);box-shadow:0 0 0 4px rgba(31,122,255,.25)}
+@media (max-width:560px){.tp-wrap{padding:16px}.tp-labels span{font-size:10px;letter-spacing:.08em}.tp-nums b{font-size:12px}}
+`
+
 // Aramaları arka planda, gizli kayıt fonksiyonuna gönderir. Site ziyaretçisi
 // için görünmez, başarısız olursa da sessizce yutulur (arama akışını bozmaz).
 function logSearch(query: string, matched: string | null) {
@@ -85,6 +97,11 @@ export default function PlayerSearch() {
     const span = Math.max(1, bottomRank - topRank)
     const fraction = Math.min(1, Math.max(0, (bottomRank - selected.rank) / span))
 
+    const lastRank = data.players.length ? data.players[data.players.length - 1].rank : bottomRank
+    // Çubukta sol uç = üst klasmana geçiş, sağ uç = alt klasmana düşüş (en alttaysa listenin sonu).
+    // pos: 0 = klasmanın en tepesi, 1 = klasmanın en dibi.
+    const pos = 1 - fraction
+
     let up: { short: string; need: number } | null = null
     if (tierIndex > 0) {
       const upperShort = TIER_ORDER[tierIndex - 1]
@@ -97,8 +114,9 @@ export default function PlayerSearch() {
     if (lowerShort) {
       down = { short: lowerShort, need: bottomRank - selected.rank }
     }
+    const end = lowerShort ? null : { need: Math.max(0, lastRank - selected.rank) }
 
-    return { up, down, fraction }
+    return { up, down, end, pos }
   }, [data, selected, tier])
 
   return <main className="site-shell">
@@ -128,13 +146,20 @@ export default function PlayerSearch() {
       <div className="player-data">
         <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
         <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
-        {tierProgress?.up && <div className="rank-progress">
-          <div><span>{tierProgress.up.short} KLASMANINA GEÇİŞ</span><b>{number.format(tierProgress.up.need)} kişi kaldı</b></div>
-          <div className="progress-track"><i style={{ transform: `scaleX(${tierProgress.fraction})` }}/></div>
-        </div>}
-        {tierProgress?.down && <div className="rank-progress">
-          <div><span>{tierProgress.down.short} KLASMANINA DÜŞÜŞ</span><b>{number.format(tierProgress.down.need)} kişi geçerse düşer</b></div>
-          <div className="progress-track"><i style={{ transform: `scaleX(${1 - tierProgress.fraction})` }}/></div>
+        {tierProgress && <div className="tp-wrap">
+          <style>{TIER_BAR_CSS}</style>
+          <div className="tp-labels">
+            <span>{tierProgress.up ? `${tierProgress.up.short} KLASMANINA GEÇİŞ` : 'KLASMANIN ZİRVESİ'}</span>
+            <span>{tierProgress.down ? `${tierProgress.down.short} KLASMANINA DÜŞÜŞ` : 'LİSTENİN SONU'}</span>
+          </div>
+          <div className="tp-bar" role="img" aria-label="Klasman içindeki konumun">
+            <i className="tp-fill" style={{ width: `${tierProgress.pos * 100}%` }}/>
+            <b className="tp-marker" style={{ left: `${tierProgress.pos * 100}%` }}/>
+          </div>
+          <div className="tp-nums">
+            <b>{tierProgress.up ? `${number.format(tierProgress.up.need)} kişi kaldı` : 'Zirvedesin'}</b>
+            <b>{tierProgress.down ? `${number.format(tierProgress.down.need)} kişi geçerse düşer` : `${number.format(tierProgress.end?.need ?? 0)} kişi sonra`}</b>
+          </div>
         </div>}
       </div>
     </section> : data ? <section className="rank-system">
