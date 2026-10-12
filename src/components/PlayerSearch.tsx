@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Search, Swords, Clock3, MapPin, Zap, ChevronRight, Shield } from 'lucide-react'
+import AdBanner from './AdBanner'
 
 type Player = { name: string; elo: number; rank: number; fightcadeRank: number; totalMatches: number; timePlayed: number; country: string }
 type Rankings = { gameName: string; players: Player[]; lastUpdated: string; totalPlayers: number }
@@ -168,6 +169,7 @@ export default function PlayerSearch() {
       <div className="rank-ladder">{classCounts.map((item, i) => <div className={`rank-row rank-${i}`} key={item.short}><b>{item.short}</b><span>KLASMANI</span><i/><small>{number.format(item.count)} OYUNCU</small></div>)}</div>
     </section> : null}
     <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>AKTİF OYUNCU</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>SON GÜNCELLEME</span><strong>{data ? new Date(data.lastUpdated).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</strong></div></section>
+    <AdBanner />
     <footer><span>sf2blacklist.fun / FIGHTCADE ARŞİVİ</span><p>Veriler Fightcade sıralama arşivinden derlenmiştir.</p><b>© 2026</b></footer>
   </main>
 }
