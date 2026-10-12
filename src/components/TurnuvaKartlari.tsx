@@ -1,23 +1,21 @@
 // epassiones.net turnuva kartları (Arcade Stick Longplays).
-// Kartları değiştirmek için aşağıdaki CARDS listesini düzenlemen yeterli.
+// Kartları değiştirmek için aşağıdaki CARDS listesini düzenlemen yeterli (her yazı TR ve EN).
 // Görseller public/turnuva/ klasöründe durur. Logo için public/turnuva/logo.png dosyasını koy;
 // dosya yoksa otomatik olarak "ASL" kutusu görünür.
 
 import { useState } from 'react'
+import type { Lang } from './i18n'
 
 const SITE_URL = 'https://epassiones.net/'
 const YOUTUBE_URL = 'https://www.youtube.com/@arcadesticklongplays'
 
+type Text = { eyebrow: string; title: string; desc: string; day: string; time: string }
 type CardItem = {
   href: string
   image: string
   position: string // görselin kartta hangi noktasının görüneceği (object-position)
-  eyebrow: string
-  title: string
   small?: boolean // uzun başlıklar için daha küçük punto
-  desc: string
-  day: string
-  time: string
+  text: Record<Lang, Text>
 }
 
 const CARDS: CardItem[] = [
@@ -25,33 +23,30 @@ const CARDS: CardItem[] = [
     href: 'https://epassiones.net/three-to-fall/',
     image: '/turnuva/three-to-fall.jpg',
     position: '50% 30%',
-    eyebrow: 'YENİ TURNUVA · 3V3',
-    title: 'THREE TO FALL',
-    desc: 'Üç karakterli ekiplerin sabit sırayla savaştığı takım turnuvası.',
-    day: 'CUMARTESİ',
-    time: '21:30 TR',
+    text: {
+      tr: { eyebrow: 'YENİ TURNUVA · 3V3', title: 'THREE TO FALL', desc: 'Üç karakterli ekiplerin sabit sırayla savaştığı takım turnuvası.', day: 'CUMARTESİ', time: '21:30 TR' },
+      en: { eyebrow: 'NEW TOURNAMENT · 3V3', title: 'THREE TO FALL', desc: 'A team tournament where three-character squads fight in a fixed order.', day: 'SATURDAY', time: '21:30 TRT' },
+    },
   },
   {
     href: 'https://epassiones.net/shadow-dojo-league-season-2/',
     image: '/turnuva/shadow-dojo-s2.jpg',
     position: '50% 22%',
-    eyebrow: 'SEZON 2 · AÇIK DAVET',
-    title: 'SHADOW DOJO LEAGUE — SEASON 2',
     small: true,
-    desc: "Türkiye ve Avrupa'dan oyunculara açık yeni sezon.",
-    day: 'PAZAR',
-    time: '21:30 TR',
+    text: {
+      tr: { eyebrow: 'SEZON 2 · AÇIK DAVET', title: 'SHADOW DOJO LEAGUE — SEASON 2', desc: "Türkiye ve Avrupa'dan oyunculara açık yeni sezon.", day: 'PAZAR', time: '21:30 TR' },
+      en: { eyebrow: 'SEASON 2 · OPEN INVITE', title: 'SHADOW DOJO LEAGUE — SEASON 2', desc: 'A new season open to players from Turkey and Europe.', day: 'SUNDAY', time: '21:30 TRT' },
+    },
   },
   {
     href: 'https://epassiones.net/crown-clash/',
     image: '/turnuva/crown-clash.jpg',
     position: '50% 40%',
-    eyebrow: 'CUMA GECESİ · TAÇ SAVAŞLARI',
-    title: 'CROWN CLASH — TAÇ SAVAŞLARI',
     small: true,
-    desc: "Türkiye'ye özel Street Fighter II rekabet gecesi.",
-    day: 'CUMA',
-    time: '21:30 TR',
+    text: {
+      tr: { eyebrow: 'CUMA GECESİ · TAÇ SAVAŞLARI', title: 'CROWN CLASH — TAÇ SAVAŞLARI', desc: "Türkiye'ye özel Street Fighter II rekabet gecesi.", day: 'CUMA', time: '21:30 TR' },
+      en: { eyebrow: 'FRIDAY NIGHT · CROWN CLASH', title: 'CROWN CLASH', desc: 'A Street Fighter II competition night exclusive to Turkey.', day: 'FRIDAY', time: '21:30 TRT' },
+    },
   },
 ]
 
@@ -97,14 +92,16 @@ function SiteLogo() {
   return <img className="tc-logo-img" src="/turnuva/logo.png" alt="Arcade Stick Longplays" onError={() => setFailed(true)} />
 }
 
-export default function TurnuvaKartlari() {
+export default function TurnuvaKartlari({ lang = 'tr' }: { lang?: Lang }) {
   return (
     <section className="tc-box" aria-label="Arcade Stick Longplays">
       <style>{CARD_CSS}</style>
       <div className="tc-head">
         <SiteLogo />
         <div className="tc-copy">
-          <h2 className="tc-title">Fightcade'in <span>rekabet geceleri.</span></h2>
+          <h2 className="tc-title">
+            {lang === 'tr' ? <>Fightcade'in <span>rekabet geceleri.</span></> : <>Fightcade's <span>competition nights.</span></>}
+          </h2>
         </div>
         <a className="tc-btn tc-btn-site" href={SITE_URL} target="_blank" rel="noopener">epassiones.net</a>
         <a className="tc-btn tc-btn-yt" href={YOUTUBE_URL} target="_blank" rel="noopener">
@@ -113,19 +110,22 @@ export default function TurnuvaKartlari() {
         </a>
       </div>
       <div className="tc-cards">
-        {CARDS.map(card => (
-          <a className="tc-card" key={card.href} href={card.href} target="_blank" rel="noopener">
-            <div className="tc-art">
-              <img src={card.image} alt="" loading="lazy" style={{ objectPosition: card.position }} />
-            </div>
-            <div className="tc-body">
-              <div className="tc-eyebrow">{card.eyebrow}</div>
-              <h3 className={card.small ? 'tc-name sm' : 'tc-name'}>{card.title}</h3>
-              <p className="tc-desc">{card.desc}</p>
-              <div className="tc-chips"><span>{card.day}</span><span>{card.time}</span></div>
-            </div>
-          </a>
-        ))}
+        {CARDS.map(card => {
+          const x = card.text[lang]
+          return (
+            <a className="tc-card" key={card.href} href={card.href} target="_blank" rel="noopener">
+              <div className="tc-art">
+                <img src={card.image} alt="" loading="lazy" style={{ objectPosition: card.position }} />
+              </div>
+              <div className="tc-body">
+                <div className="tc-eyebrow">{x.eyebrow}</div>
+                <h3 className={card.small ? 'tc-name sm' : 'tc-name'}>{x.title}</h3>
+                <p className="tc-desc">{x.desc}</p>
+                <div className="tc-chips"><span>{x.day}</span><span>{x.time}</span></div>
+              </div>
+            </a>
+          )
+        })}
       </div>
     </section>
   )

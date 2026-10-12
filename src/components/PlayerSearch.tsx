@@ -1,13 +1,14 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Search, Swords, Clock3, MapPin, Zap, ChevronRight, Shield } from 'lucide-react'
 import TurnuvaKartlari from './TurnuvaKartlari'
+import LangSwitch from './LangSwitch'
+import { STR, LOCALES, getStoredLang, type Lang } from './i18n'
 
 type Player = { name: string; elo: number; rank: number; fightcadeRank: number; totalMatches: number; timePlayed: number; country: string }
 type Rankings = { gameName: string; players: Player[]; lastUpdated: string; totalPlayers: number }
 type Tier = { name: string; short: string; level: number }
 
-const number = new Intl.NumberFormat('tr-TR')
-const playTime = (seconds: number) => `${number.format(Math.round(seconds / 3600))} saat`
+const numberFormats = { tr: new Intl.NumberFormat(LOCALES.tr.num), en: new Intl.NumberFormat(LOCALES.en.num) }
 const getTier = (elo: number): Tier => {
   if (elo >= 2000) return { name: 'S Klasmanı', short: 'S', level: 6 }
   if (elo >= 1800) return { name: 'A Klasmanı', short: 'A', level: 5 }
@@ -42,7 +43,9 @@ function logSearch(query: string, matched: string | null) {
 
 // Ziyaretçi sayacı: oturum başına bir kez sayacı artırır, sonrasında sadece okur.
 // Fonksiyon ulaşılamazsa rozet hiç gösterilmez (kırık görsel kalmaz).
-function VisitorCounter() {
+function VisitorCounter({ lang }: { lang: Lang }) {
+  const t = STR[lang]
+  const number = numberFormats[lang]
   const [count, setCount] = useState<number | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   useEffect(() => {
@@ -60,7 +63,7 @@ function VisitorCounter() {
       .catch(e => setFailure(String(e?.message ?? e)))
   }, [])
   if (count === null && failure === null) return null
-  return <div className="visitor-badge" title={failure ?? undefined} aria-label={count === null ? 'Ziyaretçi sayacı kullanılamıyor' : `Toplam ziyaretçi: ${number.format(count)}`}><span>ZİYARETÇİ</span><b>{count === null ? '?' : number.format(count)}</b></div>
+  return <div className="visitor-badge" title={failure ?? undefined} aria-label={count === null ? t.counterOff : t.counterAria(number.format(count))}><span>{t.visitors}</span><b>{count === null ? '?' : number.format(count)}</b></div>
 }
 
 function FighterArt({ side }: { side: 'ryu' | 'ken' }) {
@@ -68,6 +71,12 @@ function FighterArt({ side }: { side: 'ryu' | 'ken' }) {
 }
 
 export default function PlayerSearch() {
+  const [lang, setLang] = useState<Lang>('tr')
+  useEffect(() => { setLang(getStoredLang()) }, [])
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  const changeLang = (l: Lang) => { setLang(l); try { localStorage.setItem('lang', l) } catch {} }
+  const t = STR[lang]
+  const number = numberFormats[lang]
   const [data, setData] = useState<Rankings | null>(null)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<Player | null>(null)
@@ -123,53 +132,53 @@ export default function PlayerSearch() {
 
   return <main className="site-shell">
     <div className="halftone" aria-hidden="true" />
-    <VisitorCounter />
-    <header className="masthead"><a className="brand" href="/" aria-label="sf2blacklist.fun ana sayfa"><span className="brand-mark">R</span><span><b>sf2blacklist</b>.fun</span></a><div className="game-tag"><span>SF II</span> CHAMPION EDITION</div><div className="live-status"><span /> CANLI SIRALAMA</div></header>
+    <div className="top-tools"><LangSwitch lang={lang} onChange={changeLang} label={t.langAria} /><VisitorCounter lang={lang} /></div>
+    <header className="masthead"><a className="brand" href="/" aria-label={t.homeAria}><span className="brand-mark">R</span><span><b>sf2blacklist</b>.fun</span></a><div className="game-tag"><span>SF II</span> CHAMPION EDITION</div><div className="live-status"><span /> {t.live}</div></header>
     <section className="hero">
       <FighterArt side="ryu"/><FighterArt side="ken"/>
       <div className="hero-copy">
-        <div className="kicker"><span>FIGHTCADE</span> DÜNYA SIRALAMASI</div>
-        <p className="lede">Tam ya da kısmi isim yazabilirsin, büyük/küçük harf fark etmez.</p>
+        <div className="kicker"><span>FIGHTCADE</span> {t.kicker}</div>
+        <p className="lede">{t.lede}</p>
         <div className="search-wrap">
-          <label htmlFor="nick">OYUNCU NİCKİ</label>
-          <div className="search-box"><Search aria-hidden="true"/><input id="nick" value={query} onChange={e => { setQuery(e.target.value); setSelected(null) }} onKeyDown={e => { if (e.key === 'Enter') handleEnter() }} placeholder="Nickini yaz..." autoComplete="off" disabled={!data || error} role="combobox" aria-controls={listId} aria-expanded={matches.length > 0 && !selected}/><span className="keycap">ENTER ↵</span></div>
-          {!data && !error && <div className="loading"><span/><span/><span/> Oyuncular arenaya çağrılıyor</div>}
-          {error && <div className="notice error">Sıralama verisi yüklenemedi. Sayfayı yenileyip tekrar dene.</div>}
-          {data && query.trim().length === 1 && <div className="notice">Aramak için en az 2 karakter yaz.</div>}
-          {data && query.trim().length >= 2 && matches.length === 0 && !selected && <div className="notice">"{query}" ile eşleşen bir dövüşçü bulunamadı.</div>}
-          {matches.length > 0 && !selected && <div className="results" id={listId} role="listbox" aria-label="Oyuncu sonuçları">{matches.map(p => { const itemTier = getTier(p.elo); return <button role="option" aria-selected="false" key={`${p.rank}-${p.name}`} onClick={() => choose(p)}><span className="mini-tier">{itemTier.short}</span><span className="result-rank">#{number.format(p.rank)}</span><strong>{p.name}</strong><span className="country">{p.country}</span><ChevronRight/></button> })}</div>}
+          <label htmlFor="nick">{t.nickLabel}</label>
+          <div className="search-box"><Search aria-hidden="true"/><input id="nick" value={query} onChange={e => { setQuery(e.target.value); setSelected(null) }} onKeyDown={e => { if (e.key === 'Enter') handleEnter() }} placeholder={t.placeholder} autoComplete="off" disabled={!data || error} role="combobox" aria-controls={listId} aria-expanded={matches.length > 0 && !selected}/><span className="keycap">ENTER ↵</span></div>
+          {!data && !error && <div className="loading"><span/><span/><span/> {t.loading}</div>}
+          {error && <div className="notice error">{t.loadError}</div>}
+          {data && query.trim().length === 1 && <div className="notice">{t.minChars}</div>}
+          {data && query.trim().length >= 2 && matches.length === 0 && !selected && <div className="notice">{t.noMatch(query)}</div>}
+          {matches.length > 0 && !selected && <div className="results" id={listId} role="listbox" aria-label={t.listAria}>{matches.map(p => { const itemTier = getTier(p.elo); return <button role="option" aria-selected="false" key={`${p.rank}-${p.name}`} onClick={() => choose(p)}><span className="mini-tier">{itemTier.short}</span><span className="result-rank">#{number.format(p.rank)}</span><strong>{p.name}</strong><span className="country">{p.country}</span><ChevronRight/></button> })}</div>}
         </div>
       </div>
       <div className="round-stamp" aria-hidden="true"><span>ROUND</span><strong>1</strong><i>FIGHT!</i></div>
     </section>
 
     {selected && tier ? <section className="player-card" aria-live="polite">
-      <div className="rank-panel"><span className="panel-label">LİG RÜTBESİ</span><div className="tier-emblem"><Shield/><strong>{tier.short}</strong></div><h3>{tier.name}</h3><div className="tier-pips" aria-label={`6 üzerinden ${tier.level} seviye`}>{[1,2,3,4,5,6].map(i => <i className={i <= tier.level ? 'active' : ''} key={i}/>)}</div></div>
+      <div className="rank-panel"><span className="panel-label">{t.leagueRank}</span><div className="tier-emblem"><Shield/><strong>{tier.short}</strong></div><h3>{t.tierName(tier.short)}</h3><div className="tier-pips" aria-label={t.levelAria(tier.level)}>{[1,2,3,4,5,6].map(i => <i className={i <= tier.level ? 'active' : ''} key={i}/>)}</div></div>
       <div className="player-data">
-        <div className="player-heading"><div><span className="eyebrow">OYUNCU KARTI / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>DÜNYA SIRASI</span><strong>#{number.format(selected.rank)}</strong></div></div>
-        <div className="stat-grid"><article><Shield/><span>KLASMAN</span><strong>{tier.short}</strong></article><article><Zap/><span>FIGHTCADE RÜTBESİ</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>TOPLAM MAÇ</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>OYUN SÜRESİ</span><strong>{playTime(selected.timePlayed)}</strong></article></div>
+        <div className="player-heading"><div><span className="eyebrow">{t.playerCard} / {tier.short}</span><h2>{selected.name}</h2><p><MapPin/> {selected.country}</p></div><div className="rank-badge"><span>{t.worldRank}</span><strong>#{number.format(selected.rank)}</strong></div></div>
+        <div className="stat-grid"><article><Shield/><span>{t.tier}</span><strong>{tier.short}</strong></article><article><Zap/><span>{t.fcRank}</span><strong>{selected.fightcadeRank}</strong></article><article><Swords/><span>{t.totalMatches}</span><strong>{number.format(selected.totalMatches)}</strong></article><article><Clock3/><span>{t.playTime}</span><strong>{`${number.format(Math.round(selected.timePlayed / 3600))} ${t.hours}`}</strong></article></div>
         {tierProgress && <div className="tp-wrap">
           <style>{TIER_BAR_CSS}</style>
           <div className="tp-labels">
-            <span>{tierProgress.up ? `${tierProgress.up.short} KLASMANINA GEÇİŞ` : 'KLASMANIN ZİRVESİ'}</span>
-            <span>{tierProgress.down ? `${tierProgress.down.short} KLASMANINA DÜŞÜŞ` : 'LİSTENİN SONU'}</span>
+            <span>{tierProgress.up ? t.tpUp(tierProgress.up.short) : t.tpTop}</span>
+            <span>{tierProgress.down ? t.tpDown(tierProgress.down.short) : t.tpEnd}</span>
           </div>
-          <div className="tp-bar" role="img" aria-label="Klasman içindeki konumun">
+          <div className="tp-bar" role="img" aria-label={t.posAria}>
             <i className="tp-fill" style={{ width: `${tierProgress.pos * 100}%` }}/>
             <b className="tp-marker" style={{ left: `${tierProgress.pos * 100}%` }}/>
           </div>
           <div className="tp-nums">
-            <b>{tierProgress.up ? `${number.format(tierProgress.up.need)} kişi kaldı` : 'Zirvedesin'}</b>
-            <b>{tierProgress.down ? `${number.format(tierProgress.down.need)} kişi geçerse düşer` : `${number.format(tierProgress.end?.need ?? 0)} kişi sonra`}</b>
+            <b>{tierProgress.up ? t.tpNeed(number.format(tierProgress.up.need)) : t.tpAtTop}</b>
+            <b>{tierProgress.down ? t.tpDropNeed(number.format(tierProgress.down.need)) : t.tpAfter(number.format(tierProgress.end?.need ?? 0))}</b>
           </div>
         </div>}
       </div>
     </section> : data ? <section className="rank-system">
-      <div className="rank-intro"><span className="eyebrow">KLASMANLAR</span><h2>Agahbey</h2></div>
-      <div className="rank-ladder">{classCounts.map((item, i) => <div className={`rank-row rank-${i}`} key={item.short}><b>{item.short}</b><span>KLASMANI</span><i/><small>{number.format(item.count)} OYUNCU</small></div>)}</div>
+      <div className="rank-intro"><span className="eyebrow">{t.tiersTitle}</span><h2>Agahbey</h2></div>
+      <div className="rank-ladder">{classCounts.map((item, i) => <div className={`rank-row rank-${i}`} key={item.short}><b>{item.short}</b><span>{t.tierSuffix}</span><i/><small>{t.playersCount(number.format(item.count))}</small></div>)}</div>
     </section> : null}
-    <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>AKTİF OYUNCU</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>SON GÜNCELLEME</span><strong>{data ? new Date(data.lastUpdated).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</strong></div></section>
-    <TurnuvaKartlari />
-    <footer><span>sf2blacklist.fun / FIGHTCADE ARŞİVİ</span><p>Veriler Fightcade sıralama arşivinden derlenmiştir.</p><b>© 2026</b></footer>
+    <section className="data-strip"><div><span>ARENA</span><strong>SF2CE</strong></div><div><span>{t.stripActive}</span><strong>{data ? number.format(data.totalPlayers) : '—'}</strong></div><p>HADOUKEN! <i>勝負</i></p><div><span>{t.stripUpdated}</span><strong>{data ? new Date(data.lastUpdated).toLocaleString(LOCALES[lang].date, { dateStyle: 'short', timeStyle: 'short' }) : '—'}</strong></div></section>
+    <TurnuvaKartlari lang={lang} />
+    <footer><span>{t.footerLeft}</span><p>{t.footerMid}</p><b>© 2026</b></footer>
   </main>
 }
