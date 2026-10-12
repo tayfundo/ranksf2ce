@@ -1,6 +1,9 @@
 // Dost site reklam alanı: epassiones.net (Arcade Stick Longplays).
 // Kartları değiştirmek için aşağıdaki CARDS listesini düzenlemen yeterli.
-// Görseller public/ads/ klasöründe durur.
+// Görseller public/ads/ klasöründe durur. Logo için public/ads/logo.png dosyasını koy;
+// dosya yoksa otomatik olarak "ASL" kutusu görünür.
+
+import { useState } from 'react'
 
 const SITE_URL = 'https://epassiones.net/'
 const YOUTUBE_URL = 'https://www.youtube.com/@arcadesticklongplays'
@@ -56,6 +59,7 @@ const AD_CSS = `
 .ad-box{max-width:1180px;margin:30px auto 6px;position:relative;z-index:3;padding:16px;border:1px solid var(--line);background:rgba(4,9,22,.78)}
 .ad-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
 .ad-logo{width:42px;height:42px;display:grid;place-items:center;flex:none;background:#05060d;border:1px solid #f5b63a;color:#f5b63a;font:900 15px 'Barlow Condensed';letter-spacing:.06em}
+.ad-logo-img{display:block;height:46px;width:auto;max-width:120px;object-fit:contain;flex:none}
 .ad-copy{flex:1;min-width:180px}
 .ad-tag{display:block;font:500 9px 'DM Mono',monospace;letter-spacing:.2em;color:#8cb2d9;margin-bottom:3px}
 .ad-title{margin:0;font:800 23px/1.1 'Barlow Condensed';letter-spacing:.02em;color:#fff}
@@ -88,12 +92,18 @@ const AD_CSS = `
 }
 `
 
+function AdLogo() {
+  const [failed, setFailed] = useState(false)
+  if (failed) return <div className="ad-logo" aria-hidden="true">ASL</div>
+  return <img className="ad-logo-img" src="/ads/logo.png" alt="Arcade Stick Longplays" onError={() => setFailed(true)} />
+}
+
 export default function AdBanner() {
   return (
     <section className="ad-box" aria-label="Dost site">
       <style>{AD_CSS}</style>
       <div className="ad-head">
-        <div className="ad-logo" aria-hidden="true">ASL</div>
+        <AdLogo />
         <div className="ad-copy">
           <span className="ad-tag">DOST SİTE</span>
           <h2 className="ad-title">Fightcade'in <span>rekabet geceleri.</span></h2>
