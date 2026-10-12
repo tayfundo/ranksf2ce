@@ -1,4 +1,4 @@
-// Dost site reklam alanı: epassiones.net (Arcade Stick Longplays).
+// Reklam alanı: epassiones.net (Arcade Stick Longplays).
 // Kartları değiştirmek için aşağıdaki CARDS listesini düzenlemen yeterli.
 // Görseller public/ads/ klasöründe durur. Logo için public/ads/logo.png dosyasını koy;
 // dosya yoksa otomatik olarak "ASL" kutusu görünür.
@@ -61,7 +61,6 @@ const AD_CSS = `
 .ad-logo{width:42px;height:42px;display:grid;place-items:center;flex:none;background:#05060d;border:1px solid #f5b63a;color:#f5b63a;font:900 15px 'Barlow Condensed';letter-spacing:.06em}
 .ad-logo-img{display:block;height:46px;width:auto;max-width:120px;object-fit:contain;flex:none}
 .ad-copy{flex:1;min-width:180px}
-.ad-tag{display:block;font:500 9px 'DM Mono',monospace;letter-spacing:.2em;color:#8cb2d9;margin-bottom:3px}
 .ad-title{margin:0;font:800 23px/1.1 'Barlow Condensed';letter-spacing:.02em;color:#fff}
 .ad-title span{color:#f5b63a}
 .ad-btn{display:inline-flex;align-items:center;gap:8px;flex:none;padding:10px 14px;border-radius:4px;text-decoration:none;font:500 11px 'DM Mono',monospace;letter-spacing:.08em}
@@ -100,12 +99,11 @@ function AdLogo() {
 
 export default function AdBanner() {
   return (
-    <section className="ad-box" aria-label="Dost site">
+    <section className="ad-box" aria-label="Arcade Stick Longplays">
       <style>{AD_CSS}</style>
       <div className="ad-head">
         <AdLogo />
         <div className="ad-copy">
-          <span className="ad-tag">DOST SİTE</span>
           <h2 className="ad-title">Fightcade'in <span>rekabet geceleri.</span></h2>
         </div>
         <a className="ad-btn ad-btn-site" href={SITE_URL} target="_blank" rel="noopener">epassiones.net</a>
